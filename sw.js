@@ -1,17 +1,6 @@
-const CACHE = 'ironlog-v1';
-const BASE = '/fitness-app';
-const ASSETS = [
-  BASE + '/',
-  BASE + '/index.html',
-  BASE + '/manifest.json',
-  BASE + '/icon-192.png',
-  BASE + '/icon-512.png'
-];
+const CACHE = 'ironlog-v2';
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-  self.skipWaiting();
-});
+self.addEventListener('install', e => { self.skipWaiting(); });
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
@@ -21,7 +10,16 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if(e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match(BASE + '/index.html')))
+    caches.open(CACHE).then(cache =>
+      cache.match(e.request).then(cached => {
+        const fetched = fetch(e.request).then(res => {
+          if(res.ok) cache.put(e.request, res.clone());
+          return res;
+        }).catch(() => cached);
+        return cached || fetched;
+      })
+    )
   );
 });
